@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useFinance } from "../context/FinanceContext";
 import { formatCurrency } from "../utils/format";
 import { CHART_COLORS } from "../utils/constants";
+import { getSpendingComparison } from "../api/dashboard";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -29,6 +30,12 @@ export default function Dashboard() {
     fetchDailyExpenses();
     fetchCategoryExpenses();
   }, [fetchSummary, fetchDailyExpenses, fetchCategoryExpenses]);
+
+  // Spending comparison
+  const [comparison, setComparison] = useState(null);
+  useEffect(() => {
+    getSpendingComparison().then(setComparison).catch(() => {});
+  }, []);
 
   if (!summary) {
     return (
@@ -98,6 +105,27 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
+
+      {/* Spending Insight */}
+      {comparison && comparison.lastMonthSamePeriod > 0 && (
+        (() => {
+          const diff = comparison.thisMonth - comparison.lastMonthSamePeriod;
+          const pct = Math.round(Math.abs(diff) / comparison.lastMonthSamePeriod * 100);
+          const isMore = diff > 0;
+          const isLess = diff < 0;
+          return (
+            <div className={`rounded-2xl px-4 py-3 text-xs sm:text-sm ${
+              isMore ? "bg-rose-50 border border-rose-100" : isLess ? "bg-emerald-50 border border-emerald-100" : "bg-gray-50 border border-gray-100"
+            }`}>
+              <span className="text-gray-600">
+                {isMore && <>{" "}📈 Spent <span className="font-bold text-rose-600">{formatCurrency(Math.abs(diff))} more</span> than last month <span className="text-gray-400">({pct}%↑)</span></>}
+                {isLess && <>{" "}📉 Spent <span className="font-bold text-emerald-600">{formatCurrency(Math.abs(diff))} less</span> than last month <span className="text-gray-400">({pct}%↓)</span></>}
+                {!isMore && !isLess && <>Same spending as last month so far</>}
+              </span>
+            </div>
+          );
+        })()
+      )}
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">

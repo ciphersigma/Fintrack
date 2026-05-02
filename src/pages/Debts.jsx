@@ -115,6 +115,122 @@ function PaymentSection({ debt, onPaymentChange }) {
   );
 }
 
+// ─── Debt Payoff Strategy ───
+function DebtPayoffStrategy({ debts }) {
+  const [extraPay, setExtraPay] = useState("");
+  const unsettled = debts.filter((d) => d.type === "debt" && !d.settled && parseFloat(d.remaining) > 0);
+
+  if (unsettled.length === 0) return null;
+
+  const totalRemaining = unsettled.reduce((s, d) => s + parseFloat(d.remaining), 0);
+
+  // Calculate average monthly payment from history
+  const avgMonthlyPayment = unsettled.reduce((s, d) => {
+    const paid = parseFloat(d.total_paid);
+    if (paid <= 0) return s;
+    const created = new Date(d.date);
+    const now = new Date();
+    const months = Math.max(1, (now.getFullYear() - created.getFullYear()) * 12 + (now.getMonth() - created.getMonth()));
+    return s + paid / months;
+  }, 0);
+
+  const extra = parseFloat(extraPay) || 0;
+  const monthlyTotal = avgMonthlyPayment + extra;
+
+  // Months to debt-free
+  const monthsToFree = monthlyTotal > 0 ? Math.ceil(totalRemaining / monthlyTotal) : null;
+  const debtFreeDate = monthsToFree
+    ? new Date(new Date().getFullYear(), new Date().getMonth() + monthsToFree, 1)
+    : null;
+
+  // Avalanche (highest amount first) vs Snowball (lowest amount first)
+  const avalanche = [...unsettled].sort((a, b) => parseFloat(b.remaining) - parseFloat(a.remaining));
+  const snowball = [...unsettled].sort((a, b) => parseFloat(a.remaining) - parseFloat(b.remaining));
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 mb-6">
+      <h3 className="text-sm font-semibold text-gray-700 mb-1">Debt Payoff Strategy 🎯</h3>
+      <p className="text-xs text-gray-400 mb-4">See when you'll be debt-free</p>
+
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="bg-gray-50 rounded-xl p-3">
+          <p className="text-[10px] text-gray-400 mb-0.5">Total remaining</p>
+          <p className="text-base font-bold text-rose-600 tabular">{formatCurrency(totalRemaining)}</p>
+        </div>
+        <div className="bg-gray-50 rounded-xl p-3">
+          <p className="text-[10px] text-gray-400 mb-0.5">Avg monthly pay</p>
+          <p className="text-base font-bold text-gray-800 tabular">{formatCurrency(avgMonthlyPayment)}</p>
+        </div>
+      </div>
+
+      {/* Extra payment simulator */}
+      <div className="bg-indigo-50 rounded-xl p-4 mb-4">
+        <label className="block text-xs font-medium text-indigo-700 mb-2">
+          What if you pay extra per month?
+        </label>
+        <div className="flex gap-2 items-center">
+          <span className="text-sm text-indigo-500 shrink-0">₹</span>
+          <input
+            type="number"
+            value={extraPay}
+            onChange={(e) => setExtraPay(e.target.value)}
+            placeholder="0"
+            min="0"
+            step="100"
+            className="w-full rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400"
+          />
+          <span className="text-xs text-indigo-500 shrink-0 whitespace-nowrap">/mo</span>
+        </div>
+
+        {monthsToFree && debtFreeDate && (
+          <p className="mt-3 text-xs sm:text-sm text-indigo-800">
+            {extra > 0 ? "🚀" : "📅"} Debt-free by{" "}
+            <span className="font-bold">
+              {debtFreeDate.toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
+            </span>{" "}
+            ({monthsToFree}mo)
+          </p>
+        )}
+        {!monthsToFree && (
+          <p className="mt-3 text-xs text-indigo-500">Start making payments to see your payoff timeline</p>
+        )}
+      </div>
+
+      {/* Strategy comparison */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+        <div className="border border-gray-100 rounded-xl p-3">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="text-xs font-semibold text-gray-700">🏔️ Avalanche</span>
+            <span className="text-[10px] text-gray-400">Highest first</span>
+          </div>
+          <div className="space-y-1">
+            {avalanche.slice(0, 3).map((d, i) => (
+              <div key={d.id} className="flex items-center justify-between text-xs">
+                <span className="text-gray-600 truncate mr-2">{i + 1}. {d.person_name}</span>
+                <span className="font-medium text-rose-600 tabular shrink-0">{formatCurrency(d.remaining)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="border border-gray-100 rounded-xl p-3">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="text-xs font-semibold text-gray-700">⛷️ Snowball</span>
+            <span className="text-[10px] text-gray-400">Smallest first</span>
+          </div>
+          <div className="space-y-1">
+            {snowball.slice(0, 3).map((d, i) => (
+              <div key={d.id} className="flex items-center justify-between text-xs">
+                <span className="text-gray-600 truncate mr-2">{i + 1}. {d.person_name}</span>
+                <span className="font-medium text-rose-600 tabular shrink-0">{formatCurrency(d.remaining)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main ───
 export default function Debts() {
   const { debts, fetchDebts } = useFinance();
@@ -244,6 +360,9 @@ export default function Debts() {
           </form>
         </div>
       )}
+
+      {/* Payoff Strategy */}
+      <DebtPayoffStrategy debts={debts} />
 
       {/* Filters */}
       <div className="flex gap-1.5 mb-4">

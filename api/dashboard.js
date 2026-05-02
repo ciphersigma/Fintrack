@@ -44,6 +44,31 @@ module.exports = async (req, res) => {
       });
     }
 
+    if (action === "spending-comparison") {
+      const now = new Date();
+      const thisMonthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+      const dayOfMonth = now.getDate();
+
+      // Last month same period (1st to same day)
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastMonthStart = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}-01`;
+      const lastMonthSameDay = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}-${String(Math.min(dayOfMonth, new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0).getDate())).padStart(2, "0")}`;
+
+      // Full last month total
+      const lastMonthEnd = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}-${String(new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0).getDate()).padStart(2, "0")}`;
+
+      const thisR = await pool.query(`SELECT COALESCE(SUM(amount),0) AS total FROM transactions WHERE user_id=$1 AND type='Expense' AND date>=$2 AND date<=$3`, [uid, thisMonthStart, now.toISOString().split("T")[0]]);
+      const lastSameR = await pool.query(`SELECT COALESCE(SUM(amount),0) AS total FROM transactions WHERE user_id=$1 AND type='Expense' AND date>=$2 AND date<=$3`, [uid, lastMonthStart, lastMonthSameDay]);
+      const lastFullR = await pool.query(`SELECT COALESCE(SUM(amount),0) AS total FROM transactions WHERE user_id=$1 AND type='Expense' AND date>=$2 AND date<=$3`, [uid, lastMonthStart, lastMonthEnd]);
+
+      return res.json({
+        thisMonth: parseFloat(thisR.rows[0].total),
+        lastMonthSamePeriod: parseFloat(lastSameR.rows[0].total),
+        lastMonthFull: parseFloat(lastFullR.rows[0].total),
+        dayOfMonth,
+      });
+    }
+
     if (action === "category-expenses") {
       const r = await pool.query(`SELECT category,SUM(amount) AS total FROM transactions WHERE user_id=$1 AND type='Expense' GROUP BY category ORDER BY total DESC`, [uid]);
       return res.json(r.rows);
