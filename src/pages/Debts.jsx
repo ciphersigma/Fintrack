@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useFinance } from "../context/FinanceContext";
-import { formatCurrency, formatDate, toInputDate } from "../utils/format";
+import { formatCurrency, formatDate, formatDateShort, toInputDate } from "../utils/format";
 import * as debtApi from "../api/debts";
 import toast from "react-hot-toast";
 import {
@@ -275,52 +275,59 @@ export default function Debts() {
             return (
               <div key={d.id} className={`bg-white rounded-2xl border border-gray-100 overflow-hidden transition-opacity ${d.settled ? "opacity-50" : ""}`}>
                 <div
-                  className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 px-4 sm:px-5 py-3 sm:py-4 cursor-pointer hover:bg-gray-50/50 transition-colors"
+                  className="px-4 sm:px-5 py-3.5 sm:py-4 cursor-pointer hover:bg-gray-50/50 transition-colors"
                   onClick={() => setExpandedId(isOpen ? null : d.id)}
                 >
-                  <button className="text-gray-300 shrink-0 hidden sm:block" aria-label="Expand">
-                    {isOpen ? <HiChevronUp className="w-4 h-4" /> : <HiChevronDown className="w-4 h-4" />}
-                  </button>
+                  {/* Row 1: Avatar + Name + Amount */}
+                  <div className="flex items-center gap-3">
+                    {/* Chevron — desktop only */}
+                    <button className="text-gray-300 shrink-0 hidden sm:block" aria-label="Expand">
+                      {isOpen ? <HiChevronUp className="w-4 h-4" /> : <HiChevronDown className="w-4 h-4" />}
+                    </button>
 
-                  {/* Avatar */}
-                  <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold shrink-0 ${
-                    d.type === "debt" ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"
-                  }`}>
-                    {d.person_name.charAt(0).toUpperCase()}
-                  </div>
+                    {/* Avatar */}
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${
+                      d.type === "debt" ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"
+                    }`}>
+                      {d.person_name.charAt(0).toUpperCase()}
+                    </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                      <span className="text-sm font-medium text-gray-800 truncate">{d.person_name}</span>
-                      <span className={`text-[11px] font-medium ${d.type === "debt" ? "text-rose-500" : "text-emerald-500"}`}>
+                    {/* Name + type label */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800">{d.person_name}</p>
+                      <p className={`text-[11px] font-medium ${d.type === "debt" ? "text-rose-500" : "text-emerald-500"}`}>
                         {d.type === "debt" ? "I owe" : "Owes me"}
-                      </span>
-                      {d.settled && <span className="text-[11px] text-gray-400">· Settled</span>}
+                        {d.settled && <span className="text-gray-400"> · Settled</span>}
+                      </p>
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 text-xs text-gray-400">
-                      <span>{formatDate(d.date)}</span>
+
+                    {/* Amount — always visible */}
+                    <div className="text-right shrink-0">
+                      <p className={`text-sm font-bold tabular ${d.type === "debt" ? "text-rose-600" : "text-emerald-600"}`}>
+                        {formatCurrency(remaining)}
+                      </p>
+                      <p className="text-[10px] text-gray-400">of {formatCurrency(d.amount)}</p>
+                    </div>
+                  </div>
+
+                  {/* Row 2: Meta + Actions */}
+                  <div className="flex items-center justify-between mt-2 ml-0 sm:ml-12">
+                    <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                      <span>{formatDateShort(d.date)}</span>
                       {d.reason && <span className="hidden sm:inline">· {d.reason}</span>}
-                      <span>· {pct}% paid</span>
+                      <span>· {pct}%</span>
                     </div>
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    <p className={`text-sm font-semibold tabular ${d.type === "debt" ? "text-rose-600" : "text-emerald-600"}`}>
-                      {formatCurrency(remaining)}
-                    </p>
-                    <p className="text-[11px] text-gray-400 hidden sm:block">of {formatCurrency(d.amount)}</p>
-                  </div>
-
-                  <div className="flex gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => handleSettle(d.id)} className="p-2 sm:p-1.5 rounded-lg text-gray-400 sm:text-gray-300 hover:text-emerald-600 hover:bg-emerald-50 transition-colors" title={d.settled ? "Reopen" : "Settle"}>
-                      {d.settled ? <HiRefresh className="w-4 h-4 sm:w-3.5 sm:h-3.5" /> : <HiCheck className="w-4 h-4 sm:w-3.5 sm:h-3.5" />}
-                    </button>
-                    <button onClick={() => handleEdit(d)} className="p-2 sm:p-1.5 rounded-lg text-gray-400 sm:text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Edit">
-                      <HiPencil className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                    </button>
-                    <button onClick={() => handleDelete(d.id)} className="p-2 sm:p-1.5 rounded-lg text-gray-400 sm:text-gray-300 hover:text-rose-600 hover:bg-rose-50 transition-colors" title="Delete">
-                      <HiTrash className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                    </button>
+                    <div className="flex gap-0.5" onClick={(e) => e.stopPropagation()}>
+                      <button onClick={() => handleSettle(d.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors" title={d.settled ? "Reopen" : "Settle"}>
+                        {d.settled ? <HiRefresh className="w-4 h-4" /> : <HiCheck className="w-4 h-4" />}
+                      </button>
+                      <button onClick={() => handleEdit(d)} className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Edit">
+                        <HiPencil className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDelete(d.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" title="Delete">
+                        <HiTrash className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 

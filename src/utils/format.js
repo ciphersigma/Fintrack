@@ -14,6 +14,14 @@ export const formatDate = (dateStr) => {
   });
 };
 
+export const formatDateShort = (dateStr) => {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-IN", {
+    month: "short",
+    day: "numeric",
+  });
+};
+
 export const toInputDate = (dateStr) => {
   if (!dateStr) return "";
   return new Date(dateStr).toISOString().split("T")[0];
