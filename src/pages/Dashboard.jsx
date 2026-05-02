@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useFinance } from "../context/FinanceContext";
 import { formatCurrency } from "../utils/format";
 import { CHART_COLORS } from "../utils/constants";
-import { getSpendingComparison } from "../api/dashboard";
+import { getSpendingComparison, getStreak } from "../api/dashboard";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -37,6 +37,12 @@ export default function Dashboard() {
     getSpendingComparison().then(setComparison).catch(() => {});
   }, []);
 
+  // Streak
+  const [streak, setStreak] = useState(null);
+  useEffect(() => {
+    getStreak().then(setStreak).catch(() => {});
+  }, []);
+
   if (!summary) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -62,6 +68,31 @@ export default function Dashboard() {
         </h1>
         <p className="text-sm text-gray-400 mt-1">Here's your financial overview</p>
       </div>
+
+      {/* Streak */}
+      {streak && streak.streak > 0 && (
+        <div className="flex items-center gap-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 rounded-2xl px-4 py-3">
+          <span className="text-2xl">{streak.streak >= 30 ? "🏆" : streak.streak >= 7 ? "🔥" : "⚡"}</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-gray-800">
+              {streak.streak} day streak!
+            </p>
+            <p className="text-[11px] text-gray-500">
+              {streak.streak >= 30
+                ? "Incredible consistency. You're a pro."
+                : streak.streak >= 14
+                ? "Two weeks strong. Keep it going!"
+                : streak.streak >= 7
+                ? "One week streak. Nice discipline!"
+                : "Keep logging daily to build your streak."}
+              {streak.longestStreak > streak.streak && (
+                <span className="text-gray-400"> Best: {streak.longestStreak} days</span>
+              )}
+            </p>
+          </div>
+          <span className="text-xs font-bold text-amber-600 tabular">{streak.totalDays} total</span>
+        </div>
+      )}
 
       {/* Net Worth Hero */}
       <div className={`relative rounded-2xl overflow-hidden px-6 py-7 sm:px-8 sm:py-9 ${

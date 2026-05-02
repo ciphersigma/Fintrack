@@ -14,3 +14,6 @@ export const getMonthlyExpenses = (year) =>
 
 export const getSpendingComparison = () =>
   api.get("/dashboard", { params: { action: "spending-comparison" } }).then((r) => r.data);
+
+export const getStreak = () =>
+  api.get("/dashboard", { params: { action: "streak" } }).then((r) => r.data);

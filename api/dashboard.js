@@ -69,6 +69,55 @@ module.exports = async (req, res) => {
       });
     }
 
+    if (action === "streak") {
+      // Get all distinct dates with transactions, ordered descending
+      const r = await pool.query(
+        `SELECT DISTINCT date FROM transactions WHERE user_id=$1 ORDER BY date DESC`,
+        [uid]
+      );
+      const dates = r.rows.map((row) => row.date.toISOString().split("T")[0]);
+
+      if (dates.length === 0) return res.json({ streak: 0, longestStreak: 0 });
+
+      // Calculate current streak (consecutive days ending today or yesterday)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      const todayStr = today.toISOString().split("T")[0];
+      const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+      let streak = 0;
+      // Start counting if the most recent entry is today or yesterday
+      if (dates[0] === todayStr || dates[0] === yesterdayStr) {
+        let checkDate = new Date(dates[0]);
+        const dateSet = new Set(dates);
+        while (dateSet.has(checkDate.toISOString().split("T")[0])) {
+          streak++;
+          checkDate.setDate(checkDate.getDate() - 1);
+        }
+      }
+
+      // Calculate longest streak ever
+      let longest = 0;
+      let current = 1;
+      for (let i = 1; i < dates.length; i++) {
+        const prev = new Date(dates[i - 1]);
+        const curr = new Date(dates[i]);
+        const diffDays = (prev - curr) / (1000 * 60 * 60 * 24);
+        if (diffDays === 1) {
+          current++;
+        } else {
+          longest = Math.max(longest, current);
+          current = 1;
+        }
+      }
+      longest = Math.max(longest, current);
+
+      return res.json({ streak, longestStreak: longest, totalDays: dates.length });
+    }
+
     if (action === "category-expenses") {
       const r = await pool.query(`SELECT category,SUM(amount) AS total FROM transactions WHERE user_id=$1 AND type='Expense' GROUP BY category ORDER BY total DESC`, [uid]);
       return res.json(r.rows);
