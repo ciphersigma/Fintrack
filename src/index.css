@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+:root {
+  --accent: #4f46e5;
+  --accent-light: #eef2ff;
+}
+
+body {
+  @apply bg-[#f5f6fa] text-gray-800 antialiased;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+/* Input focus ring */
+input:focus, select:focus, textarea:focus {
+  @apply ring-2 ring-indigo-500/20 border-indigo-400;
+  outline: none;
+}
+
+/* Tabular numbers for financial data */
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* Safe area for phones with gesture bars */
+main { padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px); }
+
+/* Prevent horizontal overflow on mobile */
+html, body, #root { overflow-x: hidden; max-width: 100vw; }
+
+/* Touch targets — minimum 44px on mobile */
+@media (max-width: 640px) {
+  button, a { min-height: 36px; }
+  input, select, textarea { font-size: 16px !important; } /* Prevent iOS zoom on focus */
+}
+
+/* Card hover lift */
+.card-hover { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.card-hover:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

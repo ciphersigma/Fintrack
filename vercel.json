@@ -1,0 +1,12 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/api/transactions", "destination": "/api/transactions" },
+    { "source": "/api/dashboard", "destination": "/api/dashboard" },
+    { "source": "/api/debts", "destination": "/api/debts" },
+    { "source": "/api/health", "destination": "/api/health" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}
