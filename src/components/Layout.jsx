@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import QuickAdd from "./QuickAdd";
 import {
   HiOutlineHome,
   HiOutlineSwitchHorizontal,
@@ -168,6 +169,9 @@ export default function Layout() {
 
         {/* Mobile: bottom tab bar */}
         <BottomTabs />
+
+        {/* Quick add floating button */}
+        <QuickAdd />
       </div>
     </div>
   );
