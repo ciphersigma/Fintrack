@@ -5,42 +5,50 @@ export default function Login() {
   const { login } = useAuth();
 
   return (
-    <div className="min-h-screen bg-[#f5f6fa] flex items-center justify-center px-5">
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-200">
-            <span className="text-white text-xl sm:text-2xl font-bold">₹</span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Fintrack</h1>
-          <p className="text-xs sm:text-sm text-gray-400 mt-1">Personal Finance Tracker</p>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 flex flex-col">
+      {/* Decorative circles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-white/5" />
+        <div className="absolute top-1/3 -left-16 w-48 h-48 rounded-full bg-white/5" />
+        <div className="absolute bottom-20 right-10 w-32 h-32 rounded-full bg-white/5" />
+      </div>
+
+      {/* Content */}
+      <div className="relative flex-1 flex flex-col items-center justify-center px-6 py-12">
+        <div className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center mb-5 shadow-lg shadow-black/10">
+          <span className="text-white text-3xl font-bold">₹</span>
+        </div>
+        <h1 className="text-3xl font-extrabold text-white tracking-tight">Fintrack</h1>
+        <p className="text-white/50 text-sm mt-1.5">Your money, your control</p>
+
+        <div className="mt-10 mb-10 space-y-2.5 w-full max-w-xs">
+          {["Track income & expenses", "Manage debts & EMIs", "Visual spending analytics", "Private & secure per account"].map((t) => (
+            <div key={t} className="flex items-center gap-3 text-white/70">
+              <div className="w-1.5 h-1.5 rounded-full bg-white/40 shrink-0" />
+              <span className="text-sm">{t}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom card */}
+      <div className="relative bg-white rounded-t-3xl px-6 pt-8 pb-10" style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 40px)" }}>
+        <p className="text-lg font-bold text-gray-900 text-center mb-1">Get Started</p>
+        <p className="text-sm text-gray-400 text-center mb-6">Sign in to continue</p>
+
+        <div className="flex justify-center">
+          <GoogleLogin
+            onSuccess={login}
+            onError={() => console.error("Login failed")}
+            shape="pill"
+            size="large"
+            text="continue_with"
+            width="320"
+          />
         </div>
 
-        {/* Card */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 sm:p-8 shadow-sm">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-800 text-center mb-1.5">Welcome</h2>
-          <p className="text-xs sm:text-sm text-gray-400 text-center mb-6">
-            Sign in to track your finances
-          </p>
-
-          <div className="flex justify-center">
-            <GoogleLogin
-              onSuccess={login}
-              onError={() => console.error("Login failed")}
-              shape="pill"
-              size="large"
-              text="signin_with"
-              width="300"
-            />
-          </div>
-
-          <p className="text-[10px] sm:text-[11px] text-gray-400 text-center mt-6 leading-relaxed">
-            Your data is private and isolated per account.
-          </p>
-        </div>
-
-        <p className="text-[10px] sm:text-[11px] text-gray-400 text-center mt-6">
-          Built with ❤️ for personal use
+        <p className="text-[10px] text-gray-400 text-center mt-6 leading-relaxed">
+          Your data is stored securely and isolated per account.
         </p>
       </div>
     </div>

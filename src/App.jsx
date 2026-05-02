@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import Debts from "./pages/Debts";
 import Charts from "./pages/Charts";
+import Account from "./pages/Account";
 import Login from "./pages/Login";
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -71,6 +72,7 @@ function AppRoutes() {
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/debts" element={<Debts />} />
           <Route path="/charts" element={<Charts />} />
+          <Route path="/account" element={<Account />} />
         </Route>
       </Routes>
     </FinanceProvider>
