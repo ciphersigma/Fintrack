@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { createTransaction } from "../api/transactions";
+import { useState, useEffect } from "react";
+import { createTransaction, getTransactions } from "../api/transactions";
 import { CATEGORIES, PAYMENT_METHODS } from "../utils/constants";
+import { formatCurrency } from "../utils/format";
 import toast from "react-hot-toast";
-import { HiPlus, HiX } from "react-icons/hi";
+import { HiPlus, HiX, HiRefresh } from "react-icons/hi";
 
 const inputClass =
   "w-full rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-base text-gray-800 placeholder:text-gray-400 transition-colors";
@@ -14,6 +15,17 @@ export default function QuickAdd({ onAdded }) {
   const [payment, setPayment] = useState("UPI");
   const [type, setType] = useState("Expense");
   const [saving, setSaving] = useState(false);
+  const [lastTx, setLastTx] = useState(null);
+  const [repeating, setRepeating] = useState(false);
+
+  // Fetch last transaction on mount
+  useEffect(() => {
+    getTransactions({ page: 1, limit: 1 })
+      .then((data) => {
+        if (data.transactions?.length > 0) setLastTx(data.transactions[0]);
+      })
+      .catch(() => {});
+  }, [open]); // refresh when modal opens
 
   const reset = () => {
     setAmount("");
@@ -48,6 +60,29 @@ export default function QuickAdd({ onAdded }) {
     }
   };
 
+  const handleRepeat = async () => {
+    if (!lastTx || repeating) return;
+    setRepeating(true);
+    try {
+      await createTransaction({
+        date: new Date().toISOString().split("T")[0],
+        category: lastTx.category,
+        subcategory: lastTx.subcategory || null,
+        description: lastTx.description || null,
+        payment_method: lastTx.payment_method,
+        type: lastTx.type,
+        amount: parseFloat(lastTx.amount),
+        liability_name: lastTx.liability_name || null,
+      });
+      toast.success(`Repeated: ${lastTx.category} ${formatCurrency(lastTx.amount)}`);
+      if (onAdded) onAdded();
+    } catch {
+      toast.error("Failed");
+    } finally {
+      setRepeating(false);
+    }
+  };
+
   return (
     <>
       {/* Floating button */}
@@ -60,13 +95,12 @@ export default function QuickAdd({ onAdded }) {
         <HiPlus className="w-6 h-6" />
       </button>
 
-      {/* Modal overlay */}
+      {/* Modal */}
       {open && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setOpen(false)} />
 
           <div className="relative w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-2xl p-6 pb-8 sm:mb-0" style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 32px)" }}>
-            {/* Handle bar on mobile */}
             <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-5 sm:hidden" />
 
             <div className="flex items-center justify-between mb-5">
@@ -76,8 +110,25 @@ export default function QuickAdd({ onAdded }) {
               </button>
             </div>
 
+            {/* Repeat last */}
+            {lastTx && (
+              <button
+                onClick={handleRepeat}
+                disabled={repeating}
+                className="w-full flex items-center gap-3 px-4 py-3 mb-4 bg-gray-50 rounded-xl hover:bg-gray-100 active:bg-gray-100 transition-colors text-left"
+              >
+                <HiRefresh className={`w-4 h-4 text-indigo-500 shrink-0 ${repeating ? "animate-spin" : ""}`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-gray-700 truncate">
+                    Repeat: {lastTx.category} — {formatCurrency(lastTx.amount)}
+                  </p>
+                  <p className="text-[10px] text-gray-400">{lastTx.type} via {lastTx.payment_method}</p>
+                </div>
+              </button>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Amount — big input */}
+              {/* Amount */}
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5">Amount</label>
                 <div className="relative">
@@ -141,23 +192,11 @@ export default function QuickAdd({ onAdded }) {
                 </div>
               </div>
 
-              {/* Payment method */}
+              {/* Payment */}
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5">Payment</label>
                 <div className="flex flex-wrap gap-1.5">
-                  {PAYMENT_METHODS.slice(0, 4).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setPayment(m)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                        payment === m ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                  {PAYMENT_METHODS.slice(4).map((m) => (
+                  {PAYMENT_METHODS.map((m) => (
                     <button
                       key={m}
                       type="button"
