@@ -1,12 +1,19 @@
 import { useState, useEffect, useRef, createContext, useContext } from "react";
 
 const PIN_KEY = "fintrack_pin";
-const BIOMETRIC_KEY = "fintrack_biometric";
+const BIOMETRIC_KEY = "fintrack_bio_cred";
 const LockContext = createContext(null);
 export const useLock = () => useContext(LockContext);
 
-function canUseBiometric() {
-  return !!(window.PublicKeyCredential && navigator.credentials);
+// Check if platform authenticator (fingerprint/face) is available
+async function isBiometricAvailable() {
+  try {
+    if (!window.PublicKeyCredential) return false;
+    const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    return available;
+  } catch {
+    return false;
+  }
 }
 
 export default function LockScreen({ children }) {
@@ -17,17 +24,23 @@ export default function LockScreen({ children }) {
   const [confirmPin, setConfirmPin] = useState(null);
   const [error, setError] = useState("");
   const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [bioAvailable, setBioAvailable] = useState(false);
   const inputRefs = [useRef(), useRef(), useRef(), useRef()];
 
   useEffect(() => {
     const storedPin = localStorage.getItem(PIN_KEY);
-    const biometric = localStorage.getItem(BIOMETRIC_KEY) === "true";
+    const bioCred = localStorage.getItem(BIOMETRIC_KEY);
     setHasPin(!!storedPin);
-    setBiometricEnabled(biometric);
+    setBiometricEnabled(!!bioCred);
     if (storedPin) {
       setLocked(true);
-      if (biometric && canUseBiometric()) attemptBiometric();
+      // Auto-trigger biometric if enabled
+      if (bioCred) {
+        setTimeout(() => attemptBiometric(bioCred), 300);
+      }
     }
+    // Check if biometric hardware is available
+    isBiometricAvailable().then(setBioAvailable);
   }, []);
 
   useEffect(() => {
@@ -36,19 +49,90 @@ export default function LockScreen({ children }) {
     }
   }, [locked, settingPin]);
 
-  const attemptBiometric = async () => {
+  const attemptBiometric = async (credIdB64) => {
+    const credId = credIdB64 || localStorage.getItem(BIOMETRIC_KEY);
+    if (!credId) return;
+
     try {
-      const cred = await navigator.credentials.get({
+      // Convert base64 credential ID back to ArrayBuffer
+      const rawId = Uint8Array.from(atob(credId), (c) => c.charCodeAt(0));
+
+      const assertion = await navigator.credentials.get({
         publicKey: {
           challenge: crypto.getRandomValues(new Uint8Array(32)),
           timeout: 60000,
           userVerification: "required",
           rpId: window.location.hostname,
-          allowCredentials: [],
+          allowCredentials: [{
+            id: rawId,
+            type: "public-key",
+            transports: ["internal"],
+          }],
         },
       });
-      if (cred) setLocked(false);
-    } catch { /* user can enter PIN */ }
+
+      if (assertion) {
+        setLocked(false);
+        setPin(["", "", "", ""]);
+      }
+    } catch {
+      // Biometric failed or cancelled — user can enter PIN instead
+    }
+  };
+
+  const setupBiometric = async () => {
+    if (!bioAvailable) {
+      setError("Biometric not available on this device");
+      return;
+    }
+
+    try {
+      const userId = crypto.getRandomValues(new Uint8Array(16));
+
+      const credential = await navigator.credentials.create({
+        publicKey: {
+          challenge: crypto.getRandomValues(new Uint8Array(32)),
+          rp: {
+            name: "Fintrack",
+            id: window.location.hostname,
+          },
+          user: {
+            id: userId,
+            name: "fintrack-lock",
+            displayName: "Fintrack Lock",
+          },
+          pubKeyCredParams: [
+            { alg: -7, type: "public-key" },
+            { alg: -257, type: "public-key" },
+          ],
+          authenticatorSelection: {
+            authenticatorAttachment: "platform", // Forces device's built-in sensor
+            userVerification: "required",
+            residentKey: "discouraged", // Don't create a discoverable passkey
+          },
+          timeout: 60000,
+        },
+      });
+
+      if (credential) {
+        // Store the credential ID so we can use it for verification later
+        const credIdB64 = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+        localStorage.setItem(BIOMETRIC_KEY, credIdB64);
+        setBiometricEnabled(true);
+      }
+    } catch (err) {
+      console.error("Biometric setup error:", err);
+      setError("Biometric setup failed. Try again.");
+    }
+  };
+
+  const toggleBiometric = async () => {
+    if (biometricEnabled) {
+      localStorage.removeItem(BIOMETRIC_KEY);
+      setBiometricEnabled(false);
+    } else {
+      await setupBiometric();
+    }
   };
 
   const handlePinInput = (index, value) => {
@@ -100,28 +184,6 @@ export default function LockScreen({ children }) {
     }
   };
 
-  const toggleBiometric = async () => {
-    if (biometricEnabled) {
-      localStorage.removeItem(BIOMETRIC_KEY);
-      setBiometricEnabled(false);
-      return;
-    }
-    if (!canUseBiometric()) { setError("Not supported on this device"); return; }
-    try {
-      const cred = await navigator.credentials.create({
-        publicKey: {
-          challenge: crypto.getRandomValues(new Uint8Array(32)),
-          rp: { name: "Fintrack", id: window.location.hostname },
-          user: { id: crypto.getRandomValues(new Uint8Array(16)), name: "user", displayName: "User" },
-          pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-          authenticatorSelection: { userVerification: "required" },
-          timeout: 60000,
-        },
-      });
-      if (cred) { localStorage.setItem(BIOMETRIC_KEY, "true"); setBiometricEnabled(true); }
-    } catch { setError("Biometric setup failed"); }
-  };
-
   const removePin = () => {
     localStorage.removeItem(PIN_KEY);
     localStorage.removeItem(BIOMETRIC_KEY);
@@ -170,14 +232,20 @@ export default function LockScreen({ children }) {
 
           {error && <p className="text-rose-300 text-sm mb-4">{error}</p>}
 
-          {!settingPin && biometricEnabled && canUseBiometric() && (
-            <button onClick={attemptBiometric} className="px-5 py-2.5 text-sm font-medium text-white/80 bg-white/10 rounded-xl hover:bg-white/20 transition-colors">
+          {!settingPin && biometricEnabled && (
+            <button
+              onClick={() => attemptBiometric()}
+              className="px-5 py-2.5 text-sm font-medium text-white/80 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
+            >
               Use Fingerprint / Face
             </button>
           )}
 
           {settingPin && (
-            <button onClick={() => { setSettingPin(false); setConfirmPin(null); setPin(["", "", "", ""]); setError(""); }} className="mt-2 text-sm text-white/50 hover:text-white/80">
+            <button
+              onClick={() => { setSettingPin(false); setConfirmPin(null); setPin(["", "", "", ""]); setError(""); }}
+              className="mt-2 text-sm text-white/50 hover:text-white/80"
+            >
               Cancel
             </button>
           )}
@@ -187,7 +255,7 @@ export default function LockScreen({ children }) {
   }
 
   return (
-    <LockContext.Provider value={{ hasPin, biometricEnabled, setSettingPin, toggleBiometric, removePin }}>
+    <LockContext.Provider value={{ hasPin, biometricEnabled, bioAvailable, setSettingPin, toggleBiometric, removePin }}>
       {children}
     </LockContext.Provider>
   );

@@ -111,7 +111,7 @@ export default function Account() {
           </button>
 
           {/* Biometric */}
-          {lock.hasPin && (
+          {lock.hasPin && lock.bioAvailable && (
             <button
               onClick={lock.toggleBiometric}
               className="w-full px-5 py-3.5 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
