@@ -1,8 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useFinance } from "../context/FinanceContext";
 import QuickAdd from "./QuickAdd";
-import PullToRefresh from "./PullToRefresh";
 import {
   HiOutlineHome,
   HiOutlineSwitchHorizontal,
@@ -147,14 +145,12 @@ function BottomTabs() {
 }
 
 export default function Layout() {
-  const { refreshAll } = useFinance();
-
   return (
     <div className="min-h-screen flex">
       {/* Desktop: sidebar */}
       <Sidebar />
 
-      <PullToRefresh onRefresh={refreshAll}>
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
         {/* Mobile: minimal top bar with just the logo */}
         <header className="lg:hidden sticky top-0 z-20 bg-white/90 backdrop-blur-lg border-b border-gray-100">
           <div className="flex items-center justify-center h-12">
@@ -176,7 +172,7 @@ export default function Layout() {
 
         {/* Quick add floating button */}
         <QuickAdd />
-      </PullToRefresh>
+      </div>
     </div>
   );
 }

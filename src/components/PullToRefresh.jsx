@@ -1,82 +1,89 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 
-const PULL_THRESHOLD = 80;
+const THRESHOLD = 70;
 
 export default function PullToRefresh({ onRefresh, children }) {
   const [pullDistance, setPullDistance] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const startY = useRef(0);
-  const pulling = useRef(false);
-  const containerRef = useRef(null);
+  const isPulling = useRef(false);
+  const wrapperRef = useRef(null);
 
-  const handleTouchStart = useCallback((e) => {
-    // Only activate when scrolled to top
-    if (containerRef.current && containerRef.current.scrollTop <= 0) {
-      startY.current = e.touches[0].clientY;
-      pulling.current = true;
-    }
-  }, []);
+  const onTouchStart = useCallback((e) => {
+    // Only start pull if we're at the very top of the scroll
+    const wrapper = wrapperRef.current;
+    if (!wrapper || wrapper.scrollTop > 0 || refreshing) return;
+    startY.current = e.touches[0].clientY;
+    isPulling.current = true;
+  }, [refreshing]);
 
-  const handleTouchMove = useCallback((e) => {
-    if (!pulling.current || refreshing) return;
+  const onTouchMove = useCallback((e) => {
+    if (!isPulling.current || refreshing) return;
     const diff = e.touches[0].clientY - startY.current;
     if (diff > 0) {
-      // Apply resistance — pull gets harder the further you go
-      const distance = Math.min(diff * 0.4, 120);
-      setPullDistance(distance);
+      setPullDistance(Math.min(diff * 0.5, 130));
+      // Prevent default scroll when pulling down
+      if (diff > 10) e.preventDefault();
     } else {
-      pulling.current = false;
+      isPulling.current = false;
       setPullDistance(0);
     }
   }, [refreshing]);
 
-  const handleTouchEnd = useCallback(async () => {
-    if (!pulling.current) return;
-    pulling.current = false;
+  const onTouchEnd = useCallback(async () => {
+    if (!isPulling.current) return;
+    isPulling.current = false;
 
-    if (pullDistance >= PULL_THRESHOLD && onRefresh) {
+    if (pullDistance >= THRESHOLD && onRefresh) {
       setRefreshing(true);
+      setPullDistance(THRESHOLD); // hold at threshold while refreshing
       try {
         await onRefresh();
-      } catch {
-        // ignore
-      }
+      } catch { /* ignore */ }
       setRefreshing(false);
     }
     setPullDistance(0);
   }, [pullDistance, onRefresh]);
 
-  const progress = Math.min(pullDistance / PULL_THRESHOLD, 1);
-  const showIndicator = pullDistance > 10 || refreshing;
+  // Attach touch events with { passive: false } to allow preventDefault
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const opts = { passive: false };
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, opts);
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [onTouchStart, onTouchMove, onTouchEnd]);
+
+  const progress = Math.min(pullDistance / THRESHOLD, 1);
 
   return (
-    <div
-      ref={containerRef}
-      className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto lg:overflow-y-auto"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div ref={wrapperRef} className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto overscroll-none">
       {/* Pull indicator */}
       <div
-        className="lg:hidden flex items-center justify-center overflow-hidden transition-all"
+        className="lg:hidden flex items-center justify-center shrink-0"
         style={{
-          height: showIndicator ? `${refreshing ? 48 : pullDistance}px` : 0,
-          transition: pulling.current ? "none" : "height 0.25s ease-out",
+          height: refreshing ? 48 : pullDistance > 5 ? pullDistance : 0,
+          transition: isPulling.current ? "none" : "height 0.3s ease-out",
+          overflow: "hidden",
         }}
       >
         <div
-          className={`w-6 h-6 border-2 rounded-full ${
+          className={`w-7 h-7 rounded-full border-[2.5px] ${
             refreshing
-              ? "border-gray-300 border-t-indigo-500 animate-spin"
+              ? "border-gray-200 border-t-indigo-500 animate-spin"
               : progress >= 1
-              ? "border-indigo-500"
+              ? "border-indigo-500 border-t-transparent"
               : "border-gray-200 border-t-indigo-400"
           }`}
           style={{
-            transform: `rotate(${progress * 360}deg)`,
-            opacity: Math.max(progress, refreshing ? 1 : 0),
-            transition: pulling.current ? "none" : "all 0.2s ease",
+            transform: refreshing ? undefined : `rotate(${progress * 540}deg)`,
+            opacity: Math.max(progress * 1.5, refreshing ? 1 : 0),
           }}
         />
       </div>

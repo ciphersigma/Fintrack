@@ -1,12 +1,18 @@
 import { useAuth } from "../context/AuthContext";
 import { useFinance } from "../context/FinanceContext";
+import { useLock } from "../components/LockScreen";
 import { formatCurrency } from "../utils/format";
 import { useEffect, useState } from "react";
-import { HiOutlineLogout, HiOutlineCash, HiOutlineTrendingDown, HiOutlineScale, HiOutlineCalendar } from "react-icons/hi";
+import {
+  HiOutlineLogout, HiOutlineCash, HiOutlineTrendingDown,
+  HiOutlineScale, HiOutlineCalendar, HiOutlineLockClosed,
+  HiOutlineFingerPrint, HiOutlineTrash,
+} from "react-icons/hi";
 
 export default function Account() {
   const { user, logout } = useAuth();
   const { summary, debts, fetchSummary, fetchDebts } = useFinance();
+  const lock = useLock();
   const [confirmLogout, setConfirmLogout] = useState(false);
 
   useEffect(() => {
@@ -17,8 +23,7 @@ export default function Account() {
   if (!user) return null;
 
   const unsettledDebts = debts.filter((d) => !d.settled).length;
-  const now = new Date();
-  const monthName = now.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  const monthName = new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 
   return (
     <div className="max-w-lg mx-auto pb-8">
@@ -79,6 +84,71 @@ export default function Account() {
         </div>
       )}
 
+      {/* Security */}
+      {lock && (
+        <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50 mb-4">
+          <div className="px-5 py-3">
+            <p className="text-xs font-semibold text-gray-700">Security</p>
+          </div>
+
+          {/* PIN Lock */}
+          <button
+            onClick={() => { if (!lock.hasPin) lock.setSettingPin(true); }}
+            className="w-full px-5 py-3.5 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
+          >
+            <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
+              <HiOutlineLockClosed className="w-4 h-4 text-violet-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-700">PIN Lock</p>
+              <p className="text-[11px] text-gray-400">
+                {lock.hasPin ? "PIN is set" : "Set a 4-digit PIN to lock the app"}
+              </p>
+            </div>
+            <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 ${lock.hasPin ? "bg-indigo-500 justify-end" : "bg-gray-200 justify-start"}`}>
+              <div className="w-5 h-5 rounded-full bg-white shadow-sm" />
+            </div>
+          </button>
+
+          {/* Biometric */}
+          {lock.hasPin && (
+            <button
+              onClick={lock.toggleBiometric}
+              className="w-full px-5 py-3.5 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
+            >
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                <HiOutlineFingerPrint className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-700">Fingerprint / Face</p>
+                <p className="text-[11px] text-gray-400">
+                  {lock.biometricEnabled ? "Biometric unlock enabled" : "Use biometric to unlock"}
+                </p>
+              </div>
+              <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 ${lock.biometricEnabled ? "bg-indigo-500 justify-end" : "bg-gray-200 justify-start"}`}>
+                <div className="w-5 h-5 rounded-full bg-white shadow-sm" />
+              </div>
+            </button>
+          )}
+
+          {/* Remove PIN */}
+          {lock.hasPin && (
+            <button
+              onClick={lock.removePin}
+              className="w-full px-5 py-3.5 flex items-center gap-3 hover:bg-rose-50 transition-colors text-left"
+            >
+              <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
+                <HiOutlineTrash className="w-4 h-4 text-rose-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-rose-600">Remove PIN</p>
+                <p className="text-[11px] text-gray-400">Disable app lock</p>
+              </div>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* About */}
       <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4 mb-4">
         <p className="text-xs font-semibold text-gray-700 mb-2">About Fintrack</p>
@@ -99,18 +169,12 @@ export default function Account() {
         </button>
       ) : (
         <div className="bg-white rounded-2xl border border-rose-100 p-4">
-          <p className="text-sm text-gray-700 text-center mb-3">Are you sure you want to sign out?</p>
+          <p className="text-sm text-gray-700 text-center mb-3">Are you sure?</p>
           <div className="flex gap-2">
-            <button
-              onClick={() => setConfirmLogout(false)}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-            >
+            <button onClick={() => setConfirmLogout(false)} className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
               Cancel
             </button>
-            <button
-              onClick={logout}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-rose-600 rounded-xl hover:bg-rose-700 transition-colors"
-            >
+            <button onClick={logout} className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-rose-600 rounded-xl hover:bg-rose-700 transition-colors">
               Sign Out
             </button>
           </div>

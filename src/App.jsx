@@ -5,6 +5,7 @@ import { Toaster } from "react-hot-toast";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { FinanceProvider } from "./context/FinanceContext";
 import Layout from "./components/Layout";
+import LockScreen from "./components/LockScreen";
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import Debts from "./pages/Debts";
@@ -65,16 +66,18 @@ function AppRoutes() {
 
   return (
     <FinanceProvider>
-      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/transactions" element={<Transactions />} />
-          <Route path="/debts" element={<Debts />} />
-          <Route path="/charts" element={<Charts />} />
-          <Route path="/account" element={<Account />} />
-        </Route>
-      </Routes>
+      <LockScreen>
+        <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/transactions" element={<Transactions />} />
+            <Route path="/debts" element={<Debts />} />
+            <Route path="/charts" element={<Charts />} />
+            <Route path="/account" element={<Account />} />
+          </Route>
+        </Routes>
+      </LockScreen>
     </FinanceProvider>
   );
 }

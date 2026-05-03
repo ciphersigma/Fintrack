@@ -1,32 +1,81 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 
 const AuthContext = createContext();
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
-// Check if a JWT token is expired (with 5 min buffer)
-function isTokenExpired(token) {
+function decodeToken(token) {
   try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    const exp = payload.exp * 1000; // convert to ms
-    return Date.now() > exp - 5 * 60 * 1000; // expired or within 5 min of expiry
+    return JSON.parse(atob(token.split(".")[1]));
   } catch {
-    return true;
+    return null;
   }
 }
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const refreshTimer = useRef(null);
 
-  // On mount, check localStorage — but only if token is still valid
+  // Silently refresh token using Google One Tap
+  const silentRefresh = useCallback(() => {
+    if (!window.google?.accounts?.id) return;
+    window.google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: (response) => {
+        if (response.credential) {
+          const payload = decodeToken(response.credential);
+          if (payload) {
+            const userData = {
+              name: payload.name,
+              email: payload.email,
+              picture: payload.picture,
+              credential: response.credential,
+            };
+            setUser(userData);
+            localStorage.setItem("fintrack_user", JSON.stringify(userData));
+          }
+        }
+      },
+      auto_select: true,
+    });
+    window.google.accounts.id.prompt(() => {}); // silent prompt
+  }, []);
+
+  // Schedule token refresh before expiry
+  const scheduleRefresh = useCallback((token) => {
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    const payload = decodeToken(token);
+    if (!payload?.exp) return;
+
+    const expiresIn = payload.exp * 1000 - Date.now();
+    // Refresh 5 minutes before expiry, minimum 10 seconds
+    const refreshIn = Math.max(expiresIn - 5 * 60 * 1000, 10000);
+
+    refreshTimer.current = setTimeout(() => {
+      silentRefresh();
+    }, refreshIn);
+  }, [silentRefresh]);
+
+  // On mount, restore session from localStorage
   useEffect(() => {
     const stored = localStorage.getItem("fintrack_user");
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        if (parsed.credential && !isTokenExpired(parsed.credential)) {
+        if (parsed.credential && parsed.name) {
+          // Always restore — backend accepts expired tokens up to 7 days
           setUser(parsed);
+
+          // Check if token is expired and try silent refresh
+          const payload = decodeToken(parsed.credential);
+          if (payload?.exp && Date.now() > payload.exp * 1000) {
+            // Token expired — try silent refresh in background
+            setTimeout(silentRefresh, 1000);
+          } else {
+            // Token still valid — schedule refresh before expiry
+            scheduleRefresh(parsed.credential);
+          }
         } else {
-          // Token expired — clear it so user sees login page
           localStorage.removeItem("fintrack_user");
         }
       } catch {
@@ -34,11 +83,17 @@ export function AuthProvider({ children }) {
       }
     }
     setLoading(false);
-  }, []);
+
+    return () => {
+      if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    };
+  }, [silentRefresh, scheduleRefresh]);
 
   const login = useCallback((credentialResponse) => {
     const token = credentialResponse.credential;
-    const payload = JSON.parse(atob(token.split(".")[1]));
+    const payload = decodeToken(token);
+    if (!payload) return;
+
     const userData = {
       name: payload.name,
       email: payload.email,
@@ -47,11 +102,17 @@ export function AuthProvider({ children }) {
     };
     setUser(userData);
     localStorage.setItem("fintrack_user", JSON.stringify(userData));
-  }, []);
+    scheduleRefresh(token);
+  }, [scheduleRefresh]);
 
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem("fintrack_user");
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    // Revoke Google session
+    if (window.google?.accounts?.id) {
+      window.google.accounts.id.disableAutoSelect();
+    }
   }, []);
 
   return (
