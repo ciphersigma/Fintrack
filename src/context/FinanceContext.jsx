@@ -3,18 +3,21 @@ import * as txApi from "../api/transactions";
 import * as dashApi from "../api/dashboard";
 import * as liabApi from "../api/liabilities";
 import * as debtApi from "../api/debts";
+import * as budgetApi from "../api/budgets";
 
 const FinanceContext = createContext();
 
 export function FinanceProvider({ children }) {
   const [transactions, setTransactions] = useState([]);
   const [totalTx, setTotalTx] = useState(0);
+  const [txSummary, setTxSummary] = useState(null);
   const [summary, setSummary] = useState(null);
   const [categoryExpenses, setCategoryExpenses] = useState([]);
   const [dailyExpenses, setDailyExpenses] = useState([]);
   const [monthlyExpenses, setMonthlyExpenses] = useState([]);
   const [liabilities, setLiabilities] = useState([]);
   const [debts, setDebts] = useState([]);
+  const [budgets, setBudgets] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const fetchTransactions = useCallback(async (params) => {
@@ -23,6 +26,7 @@ export function FinanceProvider({ children }) {
       const data = await txApi.getTransactions(params);
       setTransactions(data.transactions);
       setTotalTx(data.total);
+      setTxSummary(data.summary ?? null);
     } finally {
       setLoading(false);
     }
@@ -58,6 +62,12 @@ export function FinanceProvider({ children }) {
     setDebts(data);
   }, []);
 
+  const fetchBudgets = useCallback(async () => {
+    const data = await budgetApi.getBudgets();
+    setBudgets(data);
+    return data;
+  }, []);
+
   const refreshAll = useCallback(async () => {
     await Promise.all([
       fetchSummary(),
@@ -74,12 +84,14 @@ export function FinanceProvider({ children }) {
       value={{
         transactions,
         totalTx,
+        txSummary,
         summary,
         categoryExpenses,
         dailyExpenses,
         monthlyExpenses,
         liabilities,
         debts,
+        budgets,
         loading,
         fetchTransactions,
         fetchSummary,
@@ -88,6 +100,7 @@ export function FinanceProvider({ children }) {
         fetchMonthlyExpenses,
         fetchLiabilities,
         fetchDebts,
+        fetchBudgets,
         refreshAll,
       }}
     >

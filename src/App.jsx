@@ -9,9 +9,11 @@ import LockScreen from "./components/LockScreen";
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import Debts from "./pages/Debts";
+import Budgets from "./pages/Budgets";
 import Charts from "./pages/Charts";
 import Account from "./pages/Account";
 import Login from "./pages/Login";
+import Spinner from "./components/Spinner";
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
@@ -54,10 +56,7 @@ function AppRoutes() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f5f6fa]">
-        <div className="flex items-center gap-3 text-gray-400">
-          <div className="w-5 h-5 border-2 border-gray-300 border-t-indigo-500 rounded-full animate-spin" />
-          Loading...
-        </div>
+        <Spinner label="Loading..." />
       </div>
     );
   }
@@ -73,6 +72,7 @@ function AppRoutes() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/debts" element={<Debts />} />
+            <Route path="/budgets" element={<Budgets />} />
             <Route path="/charts" element={<Charts />} />
             <Route path="/account" element={<Account />} />
           </Route>

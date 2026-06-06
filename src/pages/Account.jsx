@@ -26,7 +26,7 @@ export default function Account() {
   const monthName = new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 
   return (
-    <div className="max-w-lg mx-auto pb-8">
+    <div className="max-w-lg mx-auto pb-8 animate-in">
       {/* Profile */}
       <div className="flex flex-col items-center pt-4 mb-6">
         {user.picture ? (

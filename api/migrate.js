@@ -64,6 +64,20 @@ const migrate = async () => {
       CREATE INDEX IF NOT EXISTS idx_dp_debt ON debt_payments(debt_id);
     `);
 
+    // Ensure budgets table exists — one monthly limit per category per user
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS budgets (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(255) NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        amount NUMERIC(12, 2) NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE (user_id, category)
+      );
+      CREATE INDEX IF NOT EXISTS idx_budgets_user ON budgets(user_id);
+    `);
+
     console.log("Migration completed successfully.");
   } catch (err) {
     console.error("Migration failed:", err);
