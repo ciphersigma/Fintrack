@@ -157,20 +157,24 @@ export default function Layout() {
       {/* Desktop: sidebar */}
       <Sidebar />
 
-      {/* Mobile: pull down at the top of the page to refresh the current view */}
-      <PullToRefresh onRefresh={runRefresh}>
-        {/* Mobile: minimal top bar with just the logo */}
-        <header className="lg:hidden sticky top-0 z-20 bg-white/90 backdrop-blur-lg border-b border-gray-100">
-          <div className="flex items-center justify-center h-12">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
-                <span className="text-white text-[10px] font-bold">₹</span>
+      {/* Mobile: pull down at the top of the page to refresh the current view.
+          The header is passed separately so it stays pinned while content pulls. */}
+      <PullToRefresh
+        onRefresh={runRefresh}
+        header={
+          /* Mobile: minimal top bar with just the logo */
+          <header className="lg:hidden sticky top-0 z-20 bg-white/90 backdrop-blur-lg border-b border-gray-100">
+            <div className="flex items-center justify-center h-12">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+                  <span className="text-white text-[10px] font-bold">₹</span>
+                </div>
+                <span className="text-sm font-bold text-gray-900">Fintrack</span>
               </div>
-              <span className="text-sm font-bold text-gray-900">Fintrack</span>
             </div>
-          </div>
-        </header>
-
+          </header>
+        }
+      >
         <main className="flex-1 px-4 sm:px-6 lg:px-10 py-4 lg:py-8 pb-24 lg:pb-8 max-w-6xl w-full mx-auto">
           <Outlet />
         </main>

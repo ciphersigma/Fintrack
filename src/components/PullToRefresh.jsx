@@ -2,7 +2,7 @@ import { useRef, useState, useEffect, useCallback } from "react";
 
 const THRESHOLD = 70;
 
-export default function PullToRefresh({ onRefresh, children }) {
+export default function PullToRefresh({ onRefresh, header, children }) {
   const [pullDistance, setPullDistance] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const startY = useRef(0);
@@ -64,6 +64,9 @@ export default function PullToRefresh({ onRefresh, children }) {
 
   return (
     <div ref={wrapperRef} className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto overscroll-none">
+      {/* Stays pinned at the top — the pull indicator and content sit below it */}
+      {header}
+
       {/* Pull indicator */}
       <div
         className="lg:hidden flex items-center justify-center shrink-0"
