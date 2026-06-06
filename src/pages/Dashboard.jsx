@@ -21,15 +21,16 @@ const ChartTooltip = ({ active, payload }) => {
 
 export default function Dashboard() {
   const {
-    summary, dailyExpenses, categoryExpenses,
-    fetchSummary, fetchDailyExpenses, fetchCategoryExpenses,
+    summary, dailyExpenses, categoryExpenses, budgets,
+    fetchSummary, fetchDailyExpenses, fetchCategoryExpenses, fetchBudgets,
   } = useFinance();
 
   useEffect(() => {
     fetchSummary();
     fetchDailyExpenses();
     fetchCategoryExpenses();
-  }, [fetchSummary, fetchDailyExpenses, fetchCategoryExpenses]);
+    fetchBudgets().catch(() => {});
+  }, [fetchSummary, fetchDailyExpenses, fetchCategoryExpenses, fetchBudgets]);
 
   // Spending comparison
   const [comparison, setComparison] = useState(null);
@@ -45,10 +46,20 @@ export default function Dashboard() {
 
   if (!summary) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex items-center gap-3 text-gray-400">
-          <div className="w-5 h-5 border-2 border-gray-300 border-t-indigo-500 rounded-full animate-spin" />
-          Loading your finances...
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <div className="skeleton h-7 w-56" />
+          <div className="skeleton h-4 w-40" />
+        </div>
+        <div className="skeleton h-36 rounded-2xl" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="skeleton h-20 rounded-2xl" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+          <div className="skeleton h-56 rounded-2xl lg:col-span-3" />
+          <div className="skeleton h-56 rounded-2xl lg:col-span-2" />
         </div>
       </div>
     );
@@ -59,8 +70,17 @@ export default function Dashboard() {
   const pieData = categoryExpenses.slice(0, 6).map((c) => ({ name: c.category, value: parseFloat(c.total) }));
   const pieTotal = pieData.reduce((s, d) => s + d.value, 0);
 
+  // Budgets
+  const budgetList = budgets?.budgets ?? [];
+  const budgetTotal = budgets?.totalBudget ?? 0;
+  const budgetSpent = budgets?.totalSpent ?? 0;
+  const budgetPct = budgetTotal > 0 ? Math.round((budgetSpent / budgetTotal) * 100) : 0;
+  const topBudgets = [...budgetList].sort((a, b) => b.pct - a.pct).slice(0, 3);
+  const overBudgetCount = budgetList.filter((b) => b.pct >= 100).length;
+  const budgetBar = (pct) => (pct >= 100 ? "bg-rose-500" : pct >= 80 ? "bg-amber-500" : "bg-emerald-500");
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in">
       {/* Greeting */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">
@@ -156,6 +176,51 @@ export default function Dashboard() {
             </div>
           );
         })()
+      )}
+
+      {/* Budgets */}
+      {budgetList.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-gray-700">Budgets</h3>
+              {overBudgetCount > 0 && (
+                <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-md">
+                  {overBudgetCount} over
+                </span>
+              )}
+            </div>
+            <Link to="/budgets" className="text-xs text-indigo-500 hover:text-indigo-700 font-medium flex items-center gap-1">
+              Manage <HiArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          {/* Overall */}
+          <div className="flex items-center justify-between text-xs text-gray-400 mb-1.5">
+            <span className="tabular"><span className="font-semibold text-gray-700">{formatCurrency(budgetSpent)}</span> spent</span>
+            <span className="tabular">of {formatCurrency(budgetTotal)} · {budgetPct}%</span>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-4">
+            <div className={`h-full rounded-full transition-all ${budgetBar(budgetPct)}`} style={{ width: `${Math.min(100, budgetPct)}%` }} />
+          </div>
+
+          {/* Top categories */}
+          <div className="space-y-2.5">
+            {topBudgets.map((b) => (
+              <div key={b.id}>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="text-gray-600 truncate mr-2">{b.category}</span>
+                  <span className={`tabular font-medium shrink-0 ${b.pct >= 100 ? "text-rose-600" : "text-gray-500"}`}>
+                    {formatCurrency(b.spent)} / {formatCurrency(b.amount)}
+                  </span>
+                </div>
+                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full transition-all ${budgetBar(b.pct)}`} style={{ width: `${Math.min(100, b.pct)}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Charts Row */}

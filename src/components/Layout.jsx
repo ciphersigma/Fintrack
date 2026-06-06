@@ -6,20 +6,23 @@ import {
   HiOutlineSwitchHorizontal,
   HiOutlineUserGroup,
   HiOutlineChartBar,
+  HiOutlineChartPie,
   HiOutlineLogout,
   HiOutlineUserCircle,
   HiHome,
   HiSwitchHorizontal,
   HiUserGroup,
   HiChartBar,
+  HiChartPie,
   HiUserCircle,
 } from "react-icons/hi";
 
 const navItems = [
   { to: "/", label: "Home", icon: HiOutlineHome, iconActive: HiHome },
-  { to: "/transactions", label: "Transactions", icon: HiOutlineSwitchHorizontal, iconActive: HiSwitchHorizontal },
+  { to: "/transactions", label: "Transactions", short: "Txns", icon: HiOutlineSwitchHorizontal, iconActive: HiSwitchHorizontal },
+  { to: "/budgets", label: "Budgets", icon: HiOutlineChartPie, iconActive: HiChartPie },
   { to: "/debts", label: "Debts", icon: HiOutlineUserGroup, iconActive: HiUserGroup },
-  { to: "/charts", label: "Analytics", icon: HiOutlineChartBar, iconActive: HiChartBar },
+  { to: "/charts", label: "Analytics", short: "Stats", icon: HiOutlineChartBar, iconActive: HiChartBar },
 ];
 
 const mobileNavItems = [
@@ -117,13 +120,13 @@ function BottomTabs() {
       aria-label="Mobile navigation"
     >
       <div className="flex items-stretch">
-        {mobileNavItems.map(({ to, label, icon: IconOutline, iconActive: IconFilled }) => (
+        {mobileNavItems.map(({ to, label, short, icon: IconOutline, iconActive: IconFilled }) => (
           <NavLink
             key={to}
             to={to}
             end={to === "/"}
             className={({ isActive }) =>
-              `flex-1 flex flex-col items-center justify-center py-2 transition-colors ${
+              `flex-1 flex flex-col items-center justify-center py-2 min-w-0 transition-colors ${
                 isActive ? "text-indigo-600" : "text-gray-400"
               }`
             }
@@ -132,8 +135,8 @@ function BottomTabs() {
               const Icon = isActive ? IconFilled : IconOutline;
               return (
                 <>
-                  <Icon className="w-5 h-5" />
-                  <span className="text-[10px] font-medium mt-0.5">{label}</span>
+                  <Icon className="w-5 h-5 shrink-0" />
+                  <span className="text-[10px] font-medium mt-0.5 max-w-full truncate px-0.5">{short || label}</span>
                 </>
               );
             }}

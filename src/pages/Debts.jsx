@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useFinance } from "../context/FinanceContext";
 import { formatCurrency, formatDate, formatDateShort, toInputDate } from "../utils/format";
+import EmptyState from "../components/EmptyState";
 import * as debtApi from "../api/debts";
 import toast from "react-hot-toast";
 import {
@@ -286,7 +287,7 @@ export default function Debts() {
   const totalRec = unsettledRec.reduce((s, d) => s + parseFloat(d.remaining), 0);
 
   return (
-    <div>
+    <div className="animate-in">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-semibold text-gray-900">Debts & Receivables</h2>
@@ -381,8 +382,12 @@ export default function Debts() {
 
       {/* List */}
       {debts.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center text-gray-400 text-sm">
-          No entries yet
+        <div className="bg-white rounded-2xl border border-gray-100">
+          <EmptyState
+            emoji="🤝"
+            title={filter === "all" ? "No debts or receivables yet" : `No ${filter === "debt" ? "debts" : "receivables"} here`}
+            subtitle={'Tap "New" to track money you owe or are owed'}
+          />
         </div>
       ) : (
         <div className="space-y-2">

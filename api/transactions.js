@@ -20,7 +20,7 @@ module.exports = async (req, res) => {
         return res.json(r.rows[0]);
       }
 
-      const { type, category, startDate, endDate, page = 1, limit = 50 } = query;
+      const { type, category, search, startDate, endDate, page = 1, limit = 50 } = query;
       const conds = ["user_id=$1"];
       const params = [uid];
       let idx = 2;
@@ -29,6 +29,12 @@ module.exports = async (req, res) => {
       if (category) { conds.push(`category=$${idx++}`); params.push(category); }
       if (startDate) { conds.push(`date>=$${idx++}`); params.push(startDate); }
       if (endDate) { conds.push(`date<=$${idx++}`); params.push(endDate); }
+      if (search && search.trim()) {
+        const s = `%${search.trim()}%`;
+        conds.push(`(category ILIKE $${idx} OR subcategory ILIKE $${idx} OR description ILIKE $${idx} OR payment_method ILIKE $${idx})`);
+        params.push(s);
+        idx++;
+      }
 
       const where = `WHERE ${conds.join(" AND ")}`;
       const offset = (Number(page) - 1) * Number(limit);
@@ -38,7 +44,30 @@ module.exports = async (req, res) => {
         `SELECT * FROM transactions ${where} ORDER BY date DESC, created_at DESC LIMIT $${idx++} OFFSET $${idx++}`,
         [...params, Number(limit), offset]
       );
-      return res.json({ transactions: r.rows, total: parseInt(countR.rows[0].count, 10), page: Number(page), limit: Number(limit) });
+
+      // Month totals for the date range (independent of type/search/category filters)
+      // so the summary bar always reflects the full period.
+      let summary = null;
+      if (startDate || endDate) {
+        const sConds = ["user_id=$1"];
+        const sParams = [uid];
+        let si = 2;
+        if (startDate) { sConds.push(`date>=$${si++}`); sParams.push(startDate); }
+        if (endDate) { sConds.push(`date<=$${si++}`); sParams.push(endDate); }
+        const sumR = await pool.query(
+          `SELECT
+             COALESCE(SUM(CASE WHEN type='Income' THEN amount ELSE 0 END),0) AS income,
+             COALESCE(SUM(CASE WHEN type='Expense' THEN amount ELSE 0 END),0) AS expense
+           FROM transactions WHERE ${sConds.join(" AND ")}`,
+          sParams
+        );
+        summary = {
+          income: parseFloat(sumR.rows[0].income),
+          expense: parseFloat(sumR.rows[0].expense),
+        };
+      }
+
+      return res.json({ transactions: r.rows, total: parseInt(countR.rows[0].count, 10), page: Number(page), limit: Number(limit), summary });
     }
 
     if (method === "POST") {

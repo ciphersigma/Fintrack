@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useFinance } from "../context/FinanceContext";
 import { formatCurrency } from "../utils/format";
 import { CHART_COLORS } from "../utils/constants";
+import useIsMobile from "../hooks/useIsMobile";
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -30,6 +31,7 @@ export default function Charts() {
     categoryExpenses, dailyExpenses, monthlyExpenses,
     fetchCategoryExpenses, fetchDailyExpenses, fetchMonthlyExpenses,
   } = useFinance();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     fetchCategoryExpenses();
@@ -43,7 +45,7 @@ export default function Charts() {
   const barData = monthlyExpenses.map((m) => ({ month: new Date(m.month + "-01").toLocaleDateString("en-IN", { month: "short" }), amount: parseFloat(m.total) }));
 
   return (
-    <div>
+    <div className="animate-in">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Analytics 📈</h1>
         <p className="text-sm text-gray-400 mt-1">Visual breakdown of your spending patterns</p>
@@ -64,7 +66,7 @@ export default function Charts() {
                 </defs>
                 <CartesianGrid stroke="#f3f4f6" strokeDasharray="4 4" />
                 <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9ca3af" }} interval="preserveStartEnd" />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9ca3af" }} width={40} hide={window.innerWidth < 640} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9ca3af" }} width={40} hide={isMobile} />
                 <Tooltip content={<ChartTooltip />} cursor={false} />
                 <Area type="monotone" dataKey="amount" stroke="#6366f1" strokeWidth={2.5} fill="url(#cGrad)" dot={false} activeDot={{ r: 5, fill: "#6366f1", stroke: "#fff", strokeWidth: 2 }} />
               </AreaChart>
@@ -113,9 +115,9 @@ export default function Charts() {
               <BarChart data={barData}>
                 <CartesianGrid stroke="#f3f4f6" strokeDasharray="4 4" />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9ca3af" }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9ca3af" }} width={40} hide={window.innerWidth < 640} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9ca3af" }} width={40} hide={isMobile} />
                 <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(99,102,241,0.04)" }} />
-                <Bar dataKey="amount" radius={[6, 6, 0, 0]} barSize={window.innerWidth < 640 ? 20 : 32}>
+                <Bar dataKey="amount" radius={[6, 6, 0, 0]} barSize={isMobile ? 20 : 32}>
                   {barData.map((_, i) => (
                     <Cell key={i} fill={i === barData.length - 1 ? "#6366f1" : "#c7d2fe"} />
                   ))}
