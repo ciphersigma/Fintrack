@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useFinance } from "../context/FinanceContext";
+import { useEffect, useCallback } from "react";
+import { useFinance, usePageRefresh } from "../context/FinanceContext";
 import { formatCurrency } from "../utils/format";
 import { CHART_COLORS } from "../utils/constants";
 import useIsMobile from "../hooks/useIsMobile";
@@ -33,11 +33,13 @@ export default function Charts() {
   } = useFinance();
   const isMobile = useIsMobile();
 
-  useEffect(() => {
+  const load = useCallback(() => {
     fetchCategoryExpenses();
     fetchDailyExpenses();
     fetchMonthlyExpenses();
   }, [fetchCategoryExpenses, fetchDailyExpenses, fetchMonthlyExpenses]);
+  useEffect(() => { load(); }, [load]);
+  usePageRefresh(load);
 
   const pieData = categoryExpenses.map((c) => ({ name: c.category, value: parseFloat(c.total) }));
   const pieTotal = pieData.reduce((s, d) => s + d.value, 0);

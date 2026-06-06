@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useFinance } from "../context/FinanceContext";
+import { useFinance, usePageRefresh } from "../context/FinanceContext";
 import TransactionForm from "../components/TransactionForm";
 import TransactionTable from "../components/TransactionTable";
 import * as txApi from "../api/transactions";
@@ -83,6 +83,7 @@ export default function Transactions() {
   }, [fetchTransactions, page, startDate, endDate, typeFilter, debouncedSearch]);
 
   useEffect(() => { load(); }, [load]);
+  usePageRefresh(load);
 
   const handleCreate = async (data) => {
     try {

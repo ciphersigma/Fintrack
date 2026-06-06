@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useFinance } from "../context/FinanceContext";
+import { useFinance, usePageRefresh } from "../context/FinanceContext";
 import { formatCurrency, formatDate, formatDateShort, toInputDate } from "../utils/format";
 import EmptyState from "../components/EmptyState";
 import * as debtApi from "../api/debts";
@@ -246,6 +246,7 @@ export default function Debts() {
   }, [fetchDebts, filter]);
 
   useEffect(() => { load(); }, [load]);
+  usePageRefresh(load);
 
   const resetForm = () => { setForm(emptyForm); setEditing(null); setShowForm(false); };
   const handleChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));

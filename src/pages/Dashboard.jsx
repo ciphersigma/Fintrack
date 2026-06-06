@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { useFinance } from "../context/FinanceContext";
+import { useFinance, usePageRefresh } from "../context/FinanceContext";
 import { formatCurrency } from "../utils/format";
 import { CHART_COLORS } from "../utils/constants";
 import { getSpendingComparison, getStreak } from "../api/dashboard";
@@ -25,24 +25,21 @@ export default function Dashboard() {
     fetchSummary, fetchDailyExpenses, fetchCategoryExpenses, fetchBudgets,
   } = useFinance();
 
-  useEffect(() => {
-    fetchSummary();
-    fetchDailyExpenses();
-    fetchCategoryExpenses();
-    fetchBudgets().catch(() => {});
-  }, [fetchSummary, fetchDailyExpenses, fetchCategoryExpenses, fetchBudgets]);
-
-  // Spending comparison
+  // Spending comparison + streak (local to this page)
   const [comparison, setComparison] = useState(null);
-  useEffect(() => {
-    getSpendingComparison().then(setComparison).catch(() => {});
-  }, []);
-
-  // Streak
   const [streak, setStreak] = useState(null);
-  useEffect(() => {
-    getStreak().then(setStreak).catch(() => {});
-  }, []);
+
+  const load = useCallback(() => Promise.all([
+    fetchSummary(),
+    fetchDailyExpenses(),
+    fetchCategoryExpenses(),
+    fetchBudgets().catch(() => {}),
+    getSpendingComparison().then(setComparison).catch(() => {}),
+    getStreak().then(setStreak).catch(() => {}),
+  ]), [fetchSummary, fetchDailyExpenses, fetchCategoryExpenses, fetchBudgets]);
+
+  useEffect(() => { load(); }, [load]);
+  usePageRefresh(load);
 
   if (!summary) {
     return (

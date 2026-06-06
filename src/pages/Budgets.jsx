@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useFinance } from "../context/FinanceContext";
+import { useFinance, usePageRefresh } from "../context/FinanceContext";
 import { formatCurrency } from "../utils/format";
 import { CATEGORIES } from "../utils/constants";
 import * as budgetApi from "../api/budgets";
@@ -35,6 +35,7 @@ export default function Budgets() {
 
   const load = useCallback(() => { fetchBudgets().catch(() => {}); }, [fetchBudgets]);
   useEffect(() => { load(); }, [load]);
+  usePageRefresh(load);
 
   const list = budgets?.budgets ?? [];
   const usedCategories = list.map((b) => b.category);

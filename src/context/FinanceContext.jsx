@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import * as txApi from "../api/transactions";
 import * as dashApi from "../api/dashboard";
 import * as liabApi from "../api/liabilities";
@@ -79,6 +79,19 @@ export function FinanceProvider({ children }) {
     ]);
   }, [fetchSummary, fetchCategoryExpenses, fetchDailyExpenses, fetchMonthlyExpenses, fetchLiabilities, fetchDebts]);
 
+  // ── Pull-to-refresh registry ──
+  // Pages register what "refresh" means for the current route (usePageRefresh).
+  // runRefresh is called by the Layout's PullToRefresh; falls back to refreshAll.
+  const refreshHandler = useRef(null);
+  const registerRefresh = useCallback((fn) => {
+    refreshHandler.current = fn;
+  }, []);
+
+  const runRefresh = useCallback(async () => {
+    if (refreshHandler.current) await refreshHandler.current();
+    else await refreshAll();
+  }, [refreshAll]);
+
   return (
     <FinanceContext.Provider
       value={{
@@ -102,6 +115,8 @@ export function FinanceProvider({ children }) {
         fetchDebts,
         fetchBudgets,
         refreshAll,
+        registerRefresh,
+        runRefresh,
       }}
     >
       {children}
@@ -113,4 +128,15 @@ export const useFinance = () => {
   const ctx = useContext(FinanceContext);
   if (!ctx) throw new Error("useFinance must be used within FinanceProvider");
   return ctx;
+};
+
+// Registers the current page's refresh handler so pull-to-refresh reloads
+// exactly the data the visible route shows. Pass a memoized (useCallback)
+// handler so it re-registers only when the reload logic actually changes.
+export const usePageRefresh = (handler) => {
+  const { registerRefresh } = useFinance();
+  useEffect(() => {
+    registerRefresh(handler);
+    return () => registerRefresh(null);
+  }, [registerRefresh, handler]);
 };
